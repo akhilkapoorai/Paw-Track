@@ -26,3 +26,15 @@ externalPort = 8080
 [[ports]]
 localPort = 8081
 externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+VITE_FIREBASE_API_KEY = "AIzaSyAZ5znDybqkgqRDEwzZiBbSEDhlIhOEt-g"
+VITE_FIREBASE_AUTH_DOMAIN = "pawtrack-14d74.firebaseapp.com"
+VITE_FIREBASE_PROJECT_ID = "pawtrack-14d74"
+VITE_FIREBASE_STORAGE_BUCKET = "pawtrack-14d74.firebasestorage.app"
+VITE_FIREBASE_MESSAGING_SENDER_ID = "311004157826"
+VITE_FIREBASE_APP_ID = "1:311004157826:web:cedbf1d09170c96dd5e19b"
+FIREBASE_PROJECT_ID = "pawtrack-14d74"
+FIREBASE_STORAGE_BUCKET = "pawtrack-14d74.firebasestorage.app"
