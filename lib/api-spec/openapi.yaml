@@ -1,36 +1,782 @@
-openapi: 3.1.0
+openapi: "3.1.0"
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: "1.0.0"
 servers:
   - url: /api
-    description: Base API path
-tags:
-  - name: health
-    description: Health operations
+
 paths:
   /healthz:
     get:
-      operationId: healthCheck
-      tags: [health]
+      operationId: getHealth
       summary: Health check
-      description: Returns server health status
+      tags: [health]
       responses:
         "200":
-          description: Healthy
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/sync:
+    post:
+      operationId: syncAuth
+      summary: Upsert user after Firebase login
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthSyncInput"
+      responses:
+        "200":
+          description: User synced
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /auth/me:
+    get:
+      operationId: getMe
+      summary: Get current user profile
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /pets:
+    get:
+      operationId: listPets
+      summary: List lost pets
+      tags: [pets]
+      parameters:
+        - name: species
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: page
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of pets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PetListResponse"
+    post:
+      operationId: createPet
+      summary: Report a lost pet
+      tags: [pets]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PetInput"
+      responses:
+        "201":
+          description: Pet created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+        "401":
+          description: Unauthorized
+
+  /pets/{id}:
+    get:
+      operationId: getPet
+      summary: Get pet with sightings, AI path, updates
+      tags: [pets]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pet detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PetDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updatePet
+      summary: Update pet details (owner only)
+      tags: [pets]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PetPatch"
+      responses:
+        "200":
+          description: Updated pet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /pets/{id}/status:
+    patch:
+      operationId: updatePetStatus
+      summary: Change pet status (owner only)
+      tags: [pets]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PetStatusInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /pets/{id}/approve-ai-path:
+    patch:
+      operationId: approveAiPath
+      summary: Approve AI predicted path (owner only)
+      tags: [pets]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /pets/{id}/deny-ai-path:
+    patch:
+      operationId: denyAiPath
+      summary: Deny AI predicted path (owner only)
+      tags: [pets]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /pets/{petId}/sightings:
+    get:
+      operationId: listSightings
+      summary: List sightings for a pet
+      tags: [sightings]
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of sightings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sighting"
+    post:
+      operationId: createSighting
+      summary: Submit a new sighting
+      tags: [sightings]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SightingInput"
+      responses:
+        "201":
+          description: Sighting created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sighting"
+        "401":
+          description: Unauthorized
+
+  /sightings/{id}/flag:
+    patch:
+      operationId: flagSighting
+      summary: Flag sighting as invalid (owner only)
+      tags: [sightings]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Flagged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sighting"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /sightings/{id}/unflag:
+    patch:
+      operationId: unflagSighting
+      summary: Unflag a sighting (owner only)
+      tags: [sightings]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Unflagged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sighting"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /pets/{petId}/updates:
+    get:
+      operationId: listPetUpdates
+      summary: Get pet timeline updates
+      tags: [updates]
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of updates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PetUpdateItem"
+    post:
+      operationId: createPetUpdate
+      summary: Post owner note
+      tags: [updates]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PetUpdateInput"
+      responses:
+        "201":
+          description: Update posted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PetUpdateItem"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Firebase ID Token
+
   schemas:
     HealthStatus:
       type: object
+      required: [status, timestamp]
       properties:
         status:
           type: string
-      required:
-        - status
+        timestamp:
+          type: string
 
+    User:
+      type: object
+      required: [id, firebaseUid, displayName, email, provider, createdAt]
+      properties:
+        id:
+          type: string
+        firebaseUid:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+        photoUrl:
+          type: ["string", "null"]
+        provider:
+          type: string
+        createdAt:
+          type: string
+
+    AuthSyncInput:
+      type: object
+      required: [displayName, email, provider]
+      properties:
+        displayName:
+          type: string
+        email:
+          type: string
+        photoUrl:
+          type: ["string", "null"]
+        provider:
+          type: string
+
+    AiPathCoordinate:
+      type: object
+      required: [lat, lng, confidence, reasoning]
+      properties:
+        lat:
+          type: number
+        lng:
+          type: number
+        confidence:
+          type: string
+        reasoning:
+          type: string
+
+    AiPathCache:
+      type: object
+      required: [coordinates, summary, generatedAt, approved]
+      properties:
+        coordinates:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiPathCoordinate"
+        summary:
+          type: string
+        generatedAt:
+          type: string
+        approved:
+          type: boolean
+
+    Pet:
+      type: object
+      required: [id, name, species, color, size, description, photoUrl, status, lastSeenAddress, lastSeenLat, lastSeenLng, lastSeenAt, ownerId, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        species:
+          type: string
+        breed:
+          type: ["string", "null"]
+        color:
+          type: string
+        size:
+          type: string
+        age:
+          type: ["string", "null"]
+        description:
+          type: string
+        photoUrl:
+          type: string
+        status:
+          type: string
+          enum: [LOST, FOUND, REUNITED]
+        lastSeenAddress:
+          type: string
+        lastSeenLat:
+          type: number
+        lastSeenLng:
+          type: number
+        lastSeenAt:
+          type: string
+        ownerId:
+          type: string
+        aiPathCache:
+          oneOf:
+            - $ref: "#/components/schemas/AiPathCache"
+            - type: "null"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        owner:
+          $ref: "#/components/schemas/User"
+
+    PetListItem:
+      type: object
+      required: [id, name, species, color, size, photoUrl, status, lastSeenAddress, lastSeenLat, lastSeenLng, lastSeenAt, ownerId, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        species:
+          type: string
+        breed:
+          type: ["string", "null"]
+        color:
+          type: string
+        size:
+          type: string
+        age:
+          type: ["string", "null"]
+        description:
+          type: string
+        photoUrl:
+          type: string
+        status:
+          type: string
+          enum: [LOST, FOUND, REUNITED]
+        lastSeenAddress:
+          type: string
+        lastSeenLat:
+          type: number
+        lastSeenLng:
+          type: number
+        lastSeenAt:
+          type: string
+        ownerId:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        owner:
+          $ref: "#/components/schemas/User"
+        sightingCount:
+          type: integer
+
+    PetListResponse:
+      type: object
+      required: [pets, total, page, limit]
+      properties:
+        pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/PetListItem"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    Sighting:
+      type: object
+      required: [id, petId, reporterId, photoUrl, lat, lng, address, seenAt, confidence, isFlagged, sequence, createdAt]
+      properties:
+        id:
+          type: string
+        petId:
+          type: string
+        reporterId:
+          type: string
+        photoUrl:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        address:
+          type: string
+        seenAt:
+          type: string
+        notes:
+          type: ["string", "null"]
+        confidence:
+          type: string
+          enum: [high, medium, low]
+        isFlagged:
+          type: boolean
+        flaggedAt:
+          type: ["string", "null"]
+        sequence:
+          type: integer
+        createdAt:
+          type: string
+        reporter:
+          $ref: "#/components/schemas/User"
+
+    PetUpdateItem:
+      type: object
+      required: [id, petId, authorId, content, type, createdAt]
+      properties:
+        id:
+          type: string
+        petId:
+          type: string
+        authorId:
+          type: string
+        content:
+          type: string
+        type:
+          type: string
+          enum: [GENERAL, SIGHTING_FLAGGED, SIGHTING_REMOVED, PET_FOUND, PET_STILL_MISSING, OWNER_NOTE, AI_PATH_APPROVED, AI_PATH_DENIED]
+        createdAt:
+          type: string
+        author:
+          $ref: "#/components/schemas/User"
+
+    PetDetail:
+      type: object
+      required: [id, name, species, color, size, description, photoUrl, status, lastSeenAddress, lastSeenLat, lastSeenLng, lastSeenAt, ownerId, createdAt, updatedAt, sightings, updates]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        species:
+          type: string
+        breed:
+          type: ["string", "null"]
+        color:
+          type: string
+        size:
+          type: string
+        age:
+          type: ["string", "null"]
+        description:
+          type: string
+        photoUrl:
+          type: string
+        status:
+          type: string
+          enum: [LOST, FOUND, REUNITED]
+        lastSeenAddress:
+          type: string
+        lastSeenLat:
+          type: number
+        lastSeenLng:
+          type: number
+        lastSeenAt:
+          type: string
+        ownerId:
+          type: string
+        aiPathCache:
+          oneOf:
+            - $ref: "#/components/schemas/AiPathCache"
+            - type: "null"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        owner:
+          $ref: "#/components/schemas/User"
+        sightings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Sighting"
+        updates:
+          type: array
+          items:
+            $ref: "#/components/schemas/PetUpdateItem"
+
+    PetInput:
+      type: object
+      required: [name, species, color, size, description, photoUrl, lastSeenAddress, lastSeenLat, lastSeenLng, lastSeenAt]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        species:
+          type: string
+          enum: [dog, cat, other]
+        breed:
+          type: ["string", "null"]
+        color:
+          type: string
+          minLength: 1
+        size:
+          type: string
+          enum: [small, medium, large]
+        age:
+          type: ["string", "null"]
+        description:
+          type: string
+          minLength: 1
+        photoUrl:
+          type: string
+        lastSeenAddress:
+          type: string
+          minLength: 1
+        lastSeenLat:
+          type: number
+        lastSeenLng:
+          type: number
+        lastSeenAt:
+          type: string
+
+    PetPatch:
+      type: object
+      properties:
+        name:
+          type: string
+        species:
+          type: string
+        breed:
+          type: ["string", "null"]
+        color:
+          type: string
+        size:
+          type: string
+        age:
+          type: ["string", "null"]
+        description:
+          type: string
+        photoUrl:
+          type: string
+
+    PetStatusInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [LOST, FOUND, REUNITED]
+
+    SightingInput:
+      type: object
+      required: [photoUrl, lat, lng, address, seenAt, confidence]
+      properties:
+        photoUrl:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        address:
+          type: string
+          minLength: 1
+        seenAt:
+          type: string
+        notes:
+          type: ["string", "null"]
+        confidence:
+          type: string
+          enum: [high, medium, low]
+
+    PetUpdateInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+
+    UploadResult:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
