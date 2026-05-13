@@ -4,10 +4,22 @@ import { eq, desc, and, sql, count } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 import { logger } from "../lib/logger.js";
 import { generateAiPath } from "../services/aiService.js";
+import { sendNewPetAlerts } from "../services/alertService.js";
 import type { Server as SocketServer } from "socket.io";
 
 export function createPetsRouter(io?: SocketServer) {
   const router = Router();
+
+  router.get("/stats", async (_req, res) => {
+    try {
+      const [{ totalPets }] = await db.select({ totalPets: count() }).from(petsTable);
+      const [{ totalSightings }] = await db.select({ totalSightings: count() }).from(sightingsTable);
+      res.json({ totalPets: Number(totalPets), totalSightings: Number(totalSightings) });
+    } catch (err) {
+      logger.error({ err }, "Error fetching stats");
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
 
   async function getUserByFirebaseUid(uid: string) {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.firebaseUid, uid)).limit(1);
@@ -217,13 +229,19 @@ export function createPetsRouter(io?: SocketServer) {
         type: "GENERAL",
       });
 
-      res.status(201).json({
+      const created = {
         ...pet,
         lastSeenAt: pet.lastSeenAt?.toISOString(),
         createdAt: pet.createdAt?.toISOString(),
         updatedAt: pet.updatedAt?.toISOString(),
         owner: { ...user, createdAt: user.createdAt?.toISOString() },
+      };
+
+      setImmediate(() => {
+        sendNewPetAlerts(pet).catch((err) => logger.error({ err }, "Alert dispatch failed"));
       });
+
+      res.status(201).json(created);
     } catch (err) {
       logger.error({ err }, "Error creating pet");
       res.status(500).json({ error: "Internal server error" });

@@ -8,6 +8,8 @@ import Home from "@/pages/home";
 import PetDetail from "@/pages/pet-detail";
 import Report from "@/pages/report";
 import Dashboard from "@/pages/dashboard";
+import AlertConfirmed from "@/pages/alert-confirmed";
+import Unsubscribed from "@/pages/unsubscribed";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -28,6 +30,8 @@ function Router() {
         <Route path="/pet/:id" component={PetDetail} />
         <Route path="/report" component={Report} />
         <Route path="/dashboard" component={Dashboard} />
+        <Route path="/alert-confirmed" component={AlertConfirmed} />
+        <Route path="/unsubscribed" component={Unsubscribed} />
         <Route component={NotFound} />
       </Switch>
     </>

@@ -32,10 +32,10 @@ export function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-200 shadow-sm">
+    <nav className="sticky top-0 z-50 shadow-sm" style={{ background: "#0F172A" }}>
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg text-orange-600">
-          <PawPrint className="h-6 w-6" />
+        <Link href="/" className="flex items-center gap-2 font-bold text-lg text-white">
+          <PawPrint className="h-6 w-6 text-amber-400" />
           <span>PawTrack</span>
         </Link>
 
@@ -43,7 +43,11 @@ export function Navbar() {
           {user && (
             <>
               <Link href="/report">
-                <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
+                <Button
+                  size="sm"
+                  className="font-bold gap-1.5"
+                  style={{ background: "#F59E0B", color: "#0F172A", borderRadius: "10px" }}
+                >
                   <Plus className="h-4 w-4" />
                   Report Lost Pet
                 </Button>
@@ -52,7 +56,7 @@ export function Navbar() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={location === "/dashboard" ? "text-orange-600" : ""}
+                  className={`text-slate-300 hover:text-white hover:bg-white/10 ${location === "/dashboard" ? "text-amber-400" : ""}`}
                 >
                   <LayoutDashboard className="h-4 w-4 mr-1.5" />
                   Dashboard
@@ -66,16 +70,16 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-full hover:opacity-80 transition-opacity">
                   {user.photoURL ? (
-                    <img src={user.photoURL} className="h-8 w-8 rounded-full object-cover ring-2 ring-orange-200" alt="" />
+                    <img src={user.photoURL} className="h-8 w-8 rounded-full object-cover ring-2 ring-amber-400/50" alt="" />
                   ) : (
-                    <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-semibold text-sm">
+                    <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold text-sm">
                       {user.displayName?.[0] ?? "U"}
                     </div>
                   )}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem className="text-sm text-gray-500 font-normal" disabled>
+                <DropdownMenuItem className="text-sm text-slate-500 font-normal" disabled>
                   {user.displayName ?? user.email}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
@@ -85,41 +89,57 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button size="sm" variant="outline" onClick={handleSignIn} className="gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSignIn}
+              className="gap-1.5 border-white/20 text-white hover:bg-white/10"
+              style={{ background: "transparent" }}
+            >
               <LogIn className="h-4 w-4" />
               Sign in
             </Button>
           )}
         </div>
 
-        <button className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
+        <button className="md:hidden text-white" onClick={() => setMobileOpen(!mobileOpen)}>
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden border-t bg-white px-4 py-3 space-y-2">
+        <div className="md:hidden border-t border-white/10 px-4 py-3 space-y-2" style={{ background: "#0F172A" }}>
           {user ? (
             <>
               <Link href="/report" onClick={() => setMobileOpen(false)}>
-                <Button size="sm" className="w-full bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
+                <Button
+                  size="sm"
+                  className="w-full font-bold gap-1.5"
+                  style={{ background: "#F59E0B", color: "#0F172A" }}
+                >
                   <Plus className="h-4 w-4" />
                   Report Lost Pet
                 </Button>
               </Link>
               <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" size="sm" className="w-full justify-start">
+                <Button variant="ghost" size="sm" className="w-full justify-start text-slate-300 hover:text-white hover:bg-white/10">
                   <LayoutDashboard className="h-4 w-4 mr-1.5" />
                   Dashboard
                 </Button>
               </Link>
-              <Button variant="ghost" size="sm" className="w-full justify-start text-red-600" onClick={handleSignOut}>
+              <Button variant="ghost" size="sm" className="w-full justify-start text-red-400 hover:bg-white/10" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-1.5" />
                 Sign out
               </Button>
             </>
           ) : (
-            <Button size="sm" variant="outline" onClick={handleSignIn} className="w-full gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSignIn}
+              className="w-full gap-1.5 border-white/20 text-white hover:bg-white/10"
+              style={{ background: "transparent" }}
+            >
               <LogIn className="h-4 w-4" />
               Sign in with Google
             </Button>

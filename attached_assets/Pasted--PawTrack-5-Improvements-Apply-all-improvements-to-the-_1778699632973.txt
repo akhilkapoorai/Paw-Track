@@ -1,0 +1,178 @@
+# PawTrack — 5 Improvements
+
+Apply all improvements to the existing codebase. Do not rebuild from scratch.
+
+---
+
+## 1 — Modern Color Theme
+
+Replace the entire color system globally. Update Tailwind config — no hardcoded hex values in components.
+
+```
+Background:       #F8FAFC
+Surface:          #FFFFFF
+Border:           #E2E8F0
+Primary:          #4F46E5  (hover: #4338CA, light tint: #EEF2FF)
+Accent/CTA:       #F59E0B  (hover: #D97706)
+Text primary:     #0F172A
+Text secondary:   #475569
+Text muted:       #94A3B8
+LOST badge:       #EF4444 text on #FEF2F2 bg, border #FECACA
+FOUND badge:      #10B981 text on #ECFDF5 bg, border #A7F3D0
+REUNITED badge:   #8B5CF6 text on #F5F3FF bg, border #DDD6FE
+Map verified:     #4F46E5 solid polyline, weight 4
+Map predicted:    #F59E0B dashed polyline, weight 3, dashArray '8,5'
+```
+
+**Specific elements:**
+- **Header:** `#0F172A` background, white logo, amber "Report Lost Pet" button (`font-weight:700`)
+- **Hero:** gradient `#0F172A → #1E3A5F`, white headline, `#94A3B8` subtext
+- **Pet cards:** `border-radius:16px`, subtle shadow, hover: `translateY(-2px)` + deeper shadow
+- **Status badges:** `border-radius:999px`, uppercase, `font-weight:700`, `font-size:0.75rem`
+- **Primary buttons:** amber `#F59E0B`, `#0F172A` text, `border-radius:10px`, `font-weight:700`
+- **Secondary buttons:** indigo `#4F46E5`, white text, `border-radius:10px`
+- **Inputs:** `#F8FAFC` bg, `1.5px solid #E2E8F0` border, focus border `#4F46E5`
+- **Active tab:** `#4F46E5` text + 2px bottom border
+- **Bottom nav:** white bg, top border, active icon `#4F46E5`
+- **Map legend:** white bg, `backdrop-filter:blur(8px)`, rounded, shadow
+- **Map pins:** owner = `#EF4444`, community = `#4F46E5`, AI predicted = `#F59E0B` 50% opacity
+
+---
+
+## 2 — Location-Based Pet Feed
+
+**On home page load:**
+- Call `navigator.geolocation.getCurrentPosition()`
+- Reverse geocode with Nominatim: `https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json` (header: `User-Agent: PawTrack/1.0`)
+- Extract city + postcode for display
+
+**Location bar UI** (between hero and pet feed):
+- Pill showing `📍 Chicago, IL 60601` in `#EEF2FF` bg, `#4F46E5` text, `border-radius:999px`
+- "Change Location ▾" button next to it
+- Subtitle: "Showing X lost pets near you" in `#94A3B8`
+- Skeleton placeholder while loading
+
+**Change Location modal:**
+- Text input + Nominatim forward geocoding: `https://nominatim.openstreetmap.org/search?q={input}&format=json&limit=5`
+- Show 5 suggestions, select to update feed
+- "Use my current location" button
+
+**Filtering:**
+- Filter pets using Haversine distance — show pets within 50 miles, sorted nearest first
+- If fewer than 3 results: expand to 150 miles, show note
+- Show distance chip on each card ("2.4 miles away") when location is active
+
+---
+
+## 3 — Always-Visible "Add Sighting" Button
+
+- "Add a Sighting" button must **always be visible** on the pet profile page regardless of auth state
+- Style: full-width, amber `#F59E0B`, `#0F172A` text, `font-weight:700`, `padding:14px`, `border-radius:12px`
+- Label: "📍 I've Seen This Pet — Add Sighting"
+- **Signed in** → navigate to `/pet/:id/sighting`
+- **Not signed in** → open AuthModal → after login redirect to `/pet/:id/sighting` (preserve context)
+- Show below button when not signed in: "Have information? Sign in with Google or Facebook to help." (`font-size:0.8rem`, `color:#94A3B8`)
+- Add CTA card at TOP of Sightings tab: "Seen this pet? Add your sighting..." with same auth-gate logic
+- If user hits `/pet/:id/sighting` directly while logged out: show AuthModal immediately, then load form after login
+
+---
+
+## 4 — New Hero Tagline
+
+**H1:**
+```
+Every Second Counts.
+Help Bring Them Home.
+```
+- `font-size: clamp(2rem, 5vw, 3.25rem)`, `font-weight:800`, white, "Home." in `#F59E0B`
+
+**Subheadline:**
+```
+Lost pets find their way home faster when a community looks together.
+Browse local reports, drop a pin where you spotted a pet, and let AI
+map where they might be heading next.
+```
+- `color:#CBD5E1`, `max-width:560px`, `line-height:1.65`
+
+**CTA buttons:**
+- Primary: "Report a Lost Pet →" — amber, bold
+- Secondary: "Browse Lost Pets ↓" — transparent, white border
+- Stats line: "🐾 X pets reported · Y sightings submitted" — add `GET /api/v1/pets/stats` returning `{ totalPets, totalSightings }` if not exists
+
+**Meta:** title = `PawTrack — Help Bring Lost Pets Home`
+
+---
+
+## 5 — Email & SMS Alert Subscriptions
+
+**Install:** `npm install resend twilio @types/twilio --workspace=server`
+
+**New Replit Secrets needed:**
+```
+RESEND_API_KEY          from resend.com (free, no credit card)
+RESEND_FROM_EMAIL       use onboarding@resend.dev for dev/testing
+TWILIO_ACCOUNT_SID      optional — leave empty to disable SMS
+TWILIO_AUTH_TOKEN       optional
+TWILIO_PHONE_NUMBER     optional
+```
+
+**New Prisma model** — add to schema then run `prisma migrate dev --name add_alert_subscriptions`:
+```prisma
+model AlertSubscription {
+  id                String   @id @default(cuid())
+  email             String
+  phone             String?
+  locationName      String
+  lat               Float
+  lng               Float
+  radiusMiles       Int      @default(25)
+  species           String   @default("all")
+  isEmailVerified   Boolean  @default(false)
+  verificationToken String   @unique @default(cuid())
+  unsubscribeToken  String   @unique @default(cuid())
+  lastAlertSentAt   DateTime?
+  createdAt         DateTime @default(now())
+  @@unique([email, lat, lng])
+  @@index([lat, lng])
+}
+```
+
+**New API routes** — create `server/src/routes/alerts.ts` and register at `/api/v1/alerts`:
+```
+POST /subscribe         Validate email+location, upsert subscription, send verification email via Resend
+GET  /verify?token=     Mark isEmailVerified=true → redirect to /alert-confirmed
+GET  /unsubscribe?token= Delete subscription → redirect to /unsubscribed
+GET  /config            Return { smsEnabled: boolean } based on whether TWILIO vars are set
+```
+
+**Alert service** — create `server/src/services/alertService.ts`:
+- `sendNewPetAlerts(pet)` — fetch all verified subscribers, filter by Haversine distance ≤ radiusMiles and species match, send email via Resend + SMS via Twilio (if phone + Twilio configured), update `lastAlertSentAt`
+- Process in chunks of 20 with `Promise.allSettled` to avoid rate limits
+- Wrap everything in try/catch — never let alert failure affect pet creation
+
+**Trigger in pets route** — after `prisma.pet.create()` succeeds, fire and forget:
+```typescript
+sendNewPetAlerts(newPet).catch(err => logger.error('Alert dispatch failed:', err));
+```
+
+**Email content (build as HTML):**
+- Alert email: pet photo, name, species, last seen date + address, amber CTA button → pet profile URL, unsubscribe link in footer
+- Verification email: confirm button → `/api/v1/alerts/verify?token=`, plain clean layout
+
+**New client component** `AlertSubscribeModal.tsx`:
+- Fields: email (required), phone (optional, hide if `smsEnabled` is false), radius segmented control (5/10/25/50 mi), species segmented control (All/Dogs/Cats), read-only location display with "Change" link
+- Submit → POST `/api/v1/alerts/subscribe` → show "Check your email to confirm" success state
+- Footer: "Free to use. Unsubscribe anytime — no account needed."
+
+**Add subscribe trigger in 3 places:**
+1. Home page — dismissable banner between hero and feed: "🔔 Get notified when pets go missing near you. [Set Up Free Alerts →]" — `#EEF2FF` bg, `4px solid #4F46E5` left border
+2. Pet profile page — small link below "Add Sighting" button: "🔔 Get alerts for pets lost near you →"
+3. After sighting submitted — prompt before redirect: "Want alerts for future pets near you? [Yes] [No thanks]" — auto-redirect after 4s
+
+**New client pages** (add to React Router):
+- `/alert-confirmed` — "You're all set! Alerts are active for [location]." + "Browse Lost Pets →"
+- `/unsubscribed` — "You've been unsubscribed." + "Resubscribe" and "Go Home"
+
+---
+
+*PawTrack Improvements v2 — Theme · Location Feed · Auth CTA · Tagline · Alerts*
